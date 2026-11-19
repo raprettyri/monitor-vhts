@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<style>
+ body{font:13px Arial,sans-serif;width:300px;padding:14px;color:#172b4d}
+ h3{margin:0 0 8px;color:#07549a}
+ p{line-height:1.45;color:#526277}
+ button{width:100%;padding:10px;border:0;border-radius:7px;background:#07549a;color:white;font-weight:600;cursor:pointer}
+ #msg{margin-top:10px;white-space:pre-wrap;line-height:1.4}
+</style>
+</head>
+<body>
+<h3>FASIH-SM Table Collector</h3>
+<p>Buka halaman Data FASIH-SM, pilih VHTS 2026 → 10 OKTOBER → Status Assignment OPEN, lalu klik tombol ini. Ekstensi hanya membaca tabel yang sedang tampil; tidak melakukan login atau melewati proteksi situs.</p>
+<button id="collect">Ambil tabel halaman ini</button>
+<div id="msg"></div>
+<script src="popup.js"></script>
+</body>
+</html>

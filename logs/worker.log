@@ -1,0 +1,10 @@
+[2026-11-18T16:04:36] STATUS running | Membuka browser FASIH-SM...
+[2026-11-18T16:04:39] STATUS running | Browser terbuka. Silakan selesaikan login SSO BPS secara manual.
+[2026-11-18T16:08:17] LOGIN ERROR: Traceback (most recent call last):
+  File "C:\1100\2026\fasih_monitoring\scraper\worker.py", line 40, in login_worker
+    raise RuntimeError("Tab browser tertutup sebelum status login dapat diperiksa.")
+RuntimeError: Tab browser tertutup sebelum status login dapat diperiksa.
+
+[2026-11-18T16:08:17] STATUS error | Login worker error: RuntimeError: Tab browser tertutup sebelum status login dapat diperiksa.
+[2026-11-18T16:08:19] STATUS running | Membuka browser FASIH-SM...
+[2026-11-18T16:08:20] STATUS running | Browser terbuka. Silakan selesaikan login SSO BPS secara manual.

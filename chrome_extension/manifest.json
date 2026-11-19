@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "FASIH-SM Table Collector",
+  "version": "1.0.0",
+  "description": "Mengambil tabel FASIH-SM yang sedang dibuka oleh pengguna melalui klik manual.",
+  "permissions": ["activeTab", "scripting", "downloads"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Ambil tabel FASIH-SM"
+  }
+}
