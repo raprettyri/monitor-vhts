@@ -12,3 +12,7 @@ venv/
 data/*.json
 data/*.xlsx
 data/*.csv
+.streamlit/secrets.toml
+*.db
+*.sqlite3
+*.json
