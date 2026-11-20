@@ -20,12 +20,34 @@ st.set_page_config(
 
 st.markdown(
     """<style>
-    .block-container{padding-top:1.2rem;max-width:1550px}
-    .main-title{font-size:1.8rem;font-weight:750;color:#07549a;margin:0}
-    .sub-title{color:#64748b;margin-top:.2rem}
-    .metric-card{background:#f4f8fc;border:1px solid #e3edf7;border-radius:12px;padding:14px 16px}
-    .metric-label{font-size:.82rem;color:#64748b}
-    .metric-value{font-size:1.7rem;font-weight:750;color:#0b4f8a}
+    :root { --bps-blue:#07549a; --bps-blue-2:#1676bd; --bps-gold:#f5a623; }
+    .stApp { background: #f3f7fb; color: #19344f; }
+    [data-testid="stHeader"] { background: rgba(243,247,251,.88); }
+    [data-testid="stSidebar"] { background: #eaf1f8; border-right:1px solid #dce7f1; }
+    .block-container { padding-top:1.35rem; padding-bottom:3rem; max-width:1580px; }
+    h1,h2,h3 { color:#153b5c; letter-spacing:-.025em; }
+    .hero { background:linear-gradient(115deg,#063b70 0%,#07549a 58%,#1682c5 100%);
+      color:white; padding:25px 30px; border-radius:22px; margin:0 0 24px 0;
+      box-shadow:0 12px 30px rgba(7,84,154,.16); }
+    .hero-title {font-size:1.75rem; font-weight:800; letter-spacing:-.03em; margin:0; color:#fff;}
+    .hero-sub {font-size:.94rem; color:rgba(255,255,255,.82); margin:.45rem 0 0 0;}
+    .section-kicker {font-size:.78rem; font-weight:750; color:#5680a3; text-transform:uppercase; letter-spacing:.09em; margin-bottom:4px;}
+    .section-note {color:#71869a; font-size:.9rem; margin-top:-5px; margin-bottom:14px;}
+    .status-grid {display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin:12px 0 18px 0;}
+    .status-card {background:linear-gradient(145deg,#fff 0%,#f8fbfe 100%); border:1px solid #e0eaf3;
+      border-radius:17px; padding:17px 19px; box-shadow:0 5px 16px rgba(25,62,94,.055); min-height:105px;}
+    .status-name {font-size:.76rem; line-height:1.35; color:#607c95; font-weight:700; letter-spacing:.025em;}
+    .status-value {font-size:1.85rem; line-height:1.2; color:#07549a; font-weight:800; margin-top:9px;}
+    .summary-strip {display:flex; flex-wrap:wrap; gap:10px; margin:8px 0 22px 0;}
+    .summary-pill {background:#fff; border:1px solid #e0eaf3; border-radius:14px; padding:12px 16px; flex:1 1 180px;}
+    .summary-pill-label {font-size:.76rem; color:#70869b; font-weight:650;}
+    .summary-pill-value {font-size:1.25rem; color:#153f65; font-weight:800; margin-top:3px;}
+    div[data-testid="stDataFrame"] {border:1px solid #e1eaf2; border-radius:15px; overflow:hidden;}
+    div[data-testid="stPlotlyChart"] {background:#fff; border:1px solid #e1eaf2; border-radius:17px; padding:8px; box-shadow:0 5px 16px rgba(25,62,94,.045);}
+    div[data-testid="stDownloadButton"] button {border-radius:12px;}
+    div.stButton > button {border-radius:12px; font-weight:650;}
+    hr {border-color:#dce7f1;}
+    @media (max-width:700px) { .hero {padding:20px;border-radius:17px;} .hero-title{font-size:1.35rem;} }
     </style>""",
     unsafe_allow_html=True,
 )
@@ -40,11 +62,8 @@ def get_managers():
 db, history = get_managers()
 
 st.markdown(
-    '<p class="main-title">MONITORING PROGRES PENDATAAN FASIH-SM</p>',
-    unsafe_allow_html=True,
-)
-st.markdown(
-    '<p class="sub-title">BPS PROVINSI ACEH · Monitoring seluruh status assignment</p>',
+    '<div class="hero"><p class="hero-title">MONITORING PROGRES PENDATAAN FASIH-SM</p>'
+    '<p class="hero-sub">BPS PROVINSI ACEH &nbsp;·&nbsp; Pemantauan seluruh status assignment secara terpadu</p></div>',
     unsafe_allow_html=True,
 )
 
@@ -281,41 +300,58 @@ latest = db.latest_sync()
 def metric(label, value):
     shown = f"{value:,}" if isinstance(value, (int, float)) else str(value)
     st.markdown(
-        f'<div class="metric-card"><div class="metric-label">{label}</div>'
-        f'<div class="metric-value">{shown}</div></div>',
+        f'<div class="summary-pill"><div class="summary-pill-label">{label}</div>'
+        f'<div class="summary-pill-value">{shown}</div></div>',
         unsafe_allow_html=True,
     )
 
 
-st.subheader("Ringkasan seluruh status assignment")
-st.caption("Jumlah data berdasarkan status terakhir yang tercatat pada snapshot FASIH-SM.")
+st.markdown('<div class="section-kicker">Ringkasan</div>', unsafe_allow_html=True)
+st.subheader("Seluruh status assignment")
+st.markdown(
+    '<div class="section-note">Jumlah assignment berdasarkan status terakhir yang tercatat pada snapshot FASIH-SM.</div>',
+    unsafe_allow_html=True,
+)
 
-status_items = list(status_counts.items())
-for start_idx in range(0, len(status_items), 4):
-    row_items = status_items[start_idx:start_idx + 4]
-    metric_cols = st.columns(len(row_items))
-    for col, (status_name, amount) in zip(metric_cols, row_items):
-        with col:
-            metric(status_name, int(amount))
-
-c1, c2, c3 = st.columns(3)
-with c1:
-    metric("TOTAL SELURUH DATA", total_count)
-with c2:
-    identified = (
-        df.loc[df["Kabupaten/Kota"] != "BELUM TERIDENTIFIKASI", "Kabupaten/Kota"].nunique()
-        if "Kabupaten/Kota" in df.columns else 0
+# Status ditampilkan sebagai kartu ringkas yang responsif, tidak memanjang memenuhi satu baris.
+status_colors = {
+    "OPEN": "#f2a900",
+    "DRAFT": "#8495a7",
+    "SUBMITTED BY PENCACAH": "#3996c7",
+    "APPROVED BY PENGAWAS": "#7b70c9",
+    "COMPLETED BY ADMIN KABUPATEN": "#269b78",
+}
+status_cards = []
+for status_name, amount in status_counts.items():
+    accent = status_colors.get(status_name, "#1676bd")
+    status_cards.append(
+        f'<div class="status-card" style="border-top:4px solid {accent}">'
+        f'<div class="status-name">{status_name}</div>'
+        f'<div class="status-value">{int(amount):,}</div></div>'
     )
-    metric("KAB/KOTA TERIDENTIFIKASI", identified)
-with c3:
-    metric("PEMBARUAN TERAKHIR", latest or "—")
+st.markdown('<div class="status-grid">' + ''.join(status_cards) + '</div>', unsafe_allow_html=True)
+
+identified = (
+    df.loc[df["Kabupaten/Kota"] != "BELUM TERIDENTIFIKASI", "Kabupaten/Kota"].nunique()
+    if "Kabupaten/Kota" in df.columns else 0
+)
+st.markdown('<div class="summary-strip">', unsafe_allow_html=True)
+metric("TOTAL SELURUH DATA", total_count)
+metric("KAB/KOTA TERIDENTIFIKASI", identified)
+metric("PEMBARUAN TERAKHIR", latest or "—")
+st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ============================================================
 # REKAP PER KABUPATEN/KOTA DAN STATUS
 # ============================================================
 st.divider()
-st.subheader("Rekap status per Kabupaten/Kota")
+st.markdown('<div class="section-kicker">Sebaran wilayah</div>', unsafe_allow_html=True)
+st.subheader("Peringkat Kabupaten/Kota")
+st.markdown(
+    '<div class="section-note">Urutan otomatis dari jumlah terbanyak ke paling sedikit. Pilih status untuk melihat peringkat khusus status tersebut.</div>',
+    unsafe_allow_html=True,
+)
 
 if "Kabupaten/Kota" not in df.columns:
     df["Kabupaten/Kota"] = "BELUM TERIDENTIFIKASI"
@@ -323,59 +359,109 @@ df["Kabupaten/Kota"] = df["Kabupaten/Kota"].fillna("BELUM TERIDENTIFIKASI")
 df.loc[df["Kabupaten/Kota"].astype(str).str.strip().eq(""), "Kabupaten/Kota"] = "BELUM TERIDENTIFIKASI"
 
 status_order = [
-    "OPEN",
-    "DRAFT",
-    "SUBMITTED BY PENCACAH",
-    "APPROVED BY PENGAWAS",
+    "OPEN", "DRAFT", "SUBMITTED BY PENCACAH", "APPROVED BY PENGAWAS",
     "COMPLETED BY ADMIN KABUPATEN",
 ]
 present_statuses = [x for x in status_order if x in df["Status Assignment"].unique()]
-present_statuses += sorted(
-    x for x in df["Status Assignment"].unique()
-    if x not in present_statuses
-)
+present_statuses += sorted(x for x in df["Status Assignment"].unique() if x not in present_statuses)
 
 pivot = (
     df.groupby(["Kabupaten/Kota", "Status Assignment"])
-    .size()
-    .unstack(fill_value=0)
+    .size().unstack(fill_value=0)
 )
 pivot = pivot.reindex(index=ACEH_REGENCIES, fill_value=0)
 if "BELUM TERIDENTIFIKASI" in df["Kabupaten/Kota"].values:
-    pivot.loc["BELUM TERIDENTIFIKASI"] = (
+    unknown_row = (
         df[df["Kabupaten/Kota"] == "BELUM TERIDENTIFIKASI"]
-        .groupby(["Kabupaten/Kota", "Status Assignment"])
-        .size()
-        .unstack(fill_value=0)
-        .iloc[0]
+        .groupby(["Kabupaten/Kota", "Status Assignment"]).size().unstack(fill_value=0)
     )
+    if not unknown_row.empty:
+        pivot.loc["BELUM TERIDENTIFIKASI"] = unknown_row.iloc[0]
 pivot = pivot.reindex(columns=present_statuses, fill_value=0)
 pivot["TOTAL"] = pivot.sum(axis=1)
-pivot = pivot.sort_values("TOTAL", ascending=False, kind="stable")
-pivot_display = pivot.reset_index()
-pivot_display.insert(0, "No", range(1, len(pivot_display) + 1))
-summary = pivot_display.copy()
 
-left, right = st.columns([1.15, 1])
+chart_status = st.selectbox(
+    "Tampilkan peringkat berdasarkan",
+    ["Semua status (total)"] + present_statuses,
+    key="chart_status_filter",
+)
+rank_column = "TOTAL" if chart_status == "Semua status (total)" else chart_status
+ranked = pivot.sort_values(rank_column, ascending=False, kind="stable")
+ranked = ranked[ranked[rank_column] > 0]
+
+left, right = st.columns([1.02, 1.25], gap="large")
 with left:
-    st.dataframe(pivot_display, use_container_width=True, hide_index=True, height=540)
+    st.markdown("**Peringkat data**")
+    ranked_display = ranked.reset_index().rename(columns={"index": "Kabupaten/Kota"})
+    ranked_display.insert(0, "Peringkat", range(1, len(ranked_display) + 1))
+    st.dataframe(ranked_display, use_container_width=True, hide_index=True, height=510)
+    summary = ranked_display.copy()
+
 with right:
-    chart_data = (
-        df.groupby(["Kabupaten/Kota", "Status Assignment"])
-        .size().reset_index(name="Jumlah")
+    st.markdown("**Grafik jumlah assignment**")
+    if chart_status == "Semua status (total)":
+        chart_data = (
+            df.groupby(["Kabupaten/Kota", "Status Assignment"])
+            .size().reset_index(name="Jumlah")
+        )
+        chart_data = chart_data[chart_data["Kabupaten/Kota"].isin(ranked.index)]
+        order_regions = ranked.index.tolist()
+        fig = px.bar(
+            chart_data, x="Jumlah", y="Kabupaten/Kota", color="Status Assignment",
+            orientation="h", barmode="stack", category_orders={"Kabupaten/Kota": order_regions},
+            custom_data=["Status Assignment", "Jumlah"],
+            color_discrete_map=status_colors,
+        )
+        fig.update_traces(
+            hovertemplate="<b>%{y}</b><br>Status: %{customdata[0]}<br>Jumlah: %{customdata[1]}<extra></extra>",
+            marker_line_width=0,
+        )
+        chart_title = "Total seluruh status per Kabupaten/Kota"
+    else:
+        chart_data = ranked[[chart_status]].reset_index()
+        chart_data.columns = ["Kabupaten/Kota", "Jumlah"]
+        chart_data = chart_data[chart_data["Jumlah"] > 0]
+        fig = px.bar(
+            chart_data, x="Jumlah", y="Kabupaten/Kota", orientation="h",
+            custom_data=["Kabupaten/Kota", "Jumlah"],
+            color_discrete_sequence=[status_colors.get(chart_status, "#1676bd")],
+        )
+        fig.update_traces(
+            hovertemplate="<b>%{y}</b><br>Jumlah: %{x}<extra></extra>",
+            marker_line_width=0,
+        )
+        chart_title = f"Jumlah status {chart_status} per Kabupaten/Kota"
+
+    fig.update_layout(
+        title=dict(text=chart_title, font=dict(size=15, color="#234866")),
+        height=510, margin=dict(l=8, r=18, t=58, b=12),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#ffffff",
+        font=dict(color="#48647d", size=11),
+        xaxis=dict(title="Jumlah assignment", gridcolor="#edf2f7", zeroline=False),
+        yaxis=dict(title="", autorange="reversed", categoryorder="array",
+                   categoryarray=ranked.index.tolist()),
+        legend=dict(title="Status", orientation="h", yanchor="bottom", y=1.02,
+                    xanchor="left", x=0),
+        bargap=.28,
     )
-    chart_data = chart_data[chart_data["Kabupaten/Kota"] != "BELUM TERIDENTIFIKASI"]
-    fig = px.bar(
-        chart_data,
-        x="Jumlah",
-        y="Kabupaten/Kota",
-        color="Status Assignment",
-        orientation="h",
-        title="Komposisi status per Kabupaten/Kota",
-        barmode="stack",
+    selection = st.plotly_chart(
+        fig, use_container_width=True, key="region_status_chart",
+        on_select="rerun", selection_mode="points",
     )
-    fig.update_layout(margin=dict(l=5, r=5, t=50, b=5), legend_title_text="Status")
-    st.plotly_chart(fig, use_container_width=True)
+    selected_points = selection.selection.points if selection and hasattr(selection, "selection") else []
+    if selected_points:
+        point = selected_points[-1]
+        region = point.get("y") or (point.get("customdata", [None])[0] if point.get("customdata") else "")
+        custom = point.get("customdata") or []
+        if chart_status == "Semua status (total)":
+            selected_status = custom[0] if len(custom) > 0 else "Status terpilih"
+            selected_amount = custom[1] if len(custom) > 1 else point.get("x", 0)
+        else:
+            selected_status = chart_status
+            selected_amount = point.get("x", custom[1] if len(custom) > 1 else 0)
+        st.info(f"Dipilih: **{selected_status}** · **{region}** · **{int(selected_amount):,} assignment**")
+    else:
+        st.caption("Arahkan kursor untuk melihat jumlah. Klik salah satu bagian batang grafik untuk menampilkan jumlah status dan wilayah yang dipilih.")
 
 
 # ============================================================
