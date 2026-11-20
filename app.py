@@ -76,6 +76,51 @@ st.markdown(
     div[data-testid="stDownloadButton"] button {border-radius:12px;}
     div.stButton > button {border-radius:12px; font-weight:650;}
     hr {border-color:#dce7f1;}
+    /* FINAL OVERRIDES: paksa kontras tinggi pada tema Streamlit light. */
+    .stApp .hero, .stApp .hero p, .stApp .hero .hero-title,
+    .stApp .hero .hero-sub { color:#ffffff !important; }
+    .stApp .hero .hero-sub { color:rgba(255,255,255,.92) !important; }
+    .stApp [data-testid="stSidebar"],
+    .stApp [data-testid="stSidebar"] *,
+    .stApp [data-testid="stSidebar"] p,
+    .stApp [data-testid="stSidebar"] span,
+    .stApp [data-testid="stSidebar"] label,
+    .stApp [data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] * {
+      color:#173b5b !important;
+    }
+    .stApp [data-testid="stSidebar"] [data-baseweb="select"] > div,
+    .stApp [data-testid="stSidebar"] [data-baseweb="select"] input {
+      background:#ffffff !important; color:#173b5b !important;
+    }
+    .stApp [data-testid="stSidebar"] [data-baseweb="select"] svg { fill:#173b5b !important; }
+    .stApp [data-testid="stSidebar"] [data-testid="stAlert"] *,
+    .stApp [data-testid="stSidebar"] [data-testid="stAlert"] p {
+      color:#173b5b !important;
+    }
+    .stApp [data-testid="stWidgetLabel"] *,
+    .stApp [data-testid="stMarkdownContainer"] p,
+    .stApp .stCaption, .stApp small { color:#294b68 !important; }
+    .stApp [data-baseweb="select"] > div {
+      background:#ffffff !important; border-color:#cbd9e6 !important;
+    }
+    .stApp [data-baseweb="select"] *,
+    .stApp [data-baseweb="input"] input,
+    .stApp [data-baseweb="textarea"] textarea { color:#173b5b !important; }
+    .stApp [data-baseweb="select"] svg { fill:#173b5b !important; }
+    .stApp [data-testid="stDataFrame"] {
+      background:#ffffff !important; color:#173b5b !important;
+    }
+    .stApp [data-testid="stPlotlyChart"] { background:#ffffff !important; }
+    .stApp [data-testid="stPlotlyChart"] .js-plotly-plot,
+    .stApp [data-testid="stPlotlyChart"] .plot-container { background:#ffffff !important; }
+    .stApp div[data-testid="stButton"] button,
+    .stApp div[data-testid="stDownloadButton"] button {
+      color:#173b5b !important; background:#ffffff !important;
+      border:1px solid #9fb7cc !important;
+    }
+    .stApp div[data-testid="stButton"] button[kind="primary"] {
+      color:#ffffff !important; background:#07549a !important; border-color:#07549a !important;
+    }
     @media (max-width:700px) { .hero {padding:20px;border-radius:17px;} .hero-title{font-size:1.35rem;} }
     </style>""",
     unsafe_allow_html=True,
@@ -466,10 +511,13 @@ with right:
         height=510, margin=dict(l=8, r=18, t=58, b=12),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#ffffff",
         font=dict(color="#48647d", size=11),
-        xaxis=dict(title="Jumlah assignment", gridcolor="#edf2f7", zeroline=False),
-        yaxis=dict(title="", autorange="reversed", categoryorder="array",
-                   categoryarray=ranked.index.tolist()),
-        legend=dict(title="Status", orientation="h", yanchor="bottom", y=1.02,
+        xaxis=dict(title=dict(text="Jumlah assignment", font=dict(color="#294b68")),
+                   tickfont=dict(color="#294b68"), gridcolor="#e4edf5", zeroline=False),
+        yaxis=dict(title="", tickfont=dict(color="#294b68"), autorange="reversed",
+                   categoryorder="array", categoryarray=ranked.index.tolist()),
+        legend=dict(title=dict(text="Status", font=dict(color="#294b68")),
+                    font=dict(color="#294b68", size=11),
+                    orientation="h", yanchor="bottom", y=1.02,
                     xanchor="left", x=0),
         bargap=.28,
     )
