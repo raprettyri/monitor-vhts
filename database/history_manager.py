@@ -149,7 +149,7 @@ class HistoryManager:
         records = self._load_snapshot_records()
         if not records:
             return pd.DataFrame(columns=[
-                "Waktu", "Survei", "Periode", "Total_OPEN", "Belum_Teridentifikasi"
+                "Waktu", "Survei", "Periode", "Total_Data", "Belum_Teridentifikasi"
             ])
         df = pd.DataFrame(records)
         df["id"] = pd.to_numeric(df["id"], errors="coerce").fillna(0)
@@ -160,9 +160,9 @@ class HistoryManager:
             "captured_at": "Waktu",
             "survey": "Survei",
             "period": "Periode",
-            "total_open": "Total_OPEN",
+            "total_open": "Total_Data",
             "unknown_count": "Belum_Teridentifikasi",
-        })[["Waktu", "Survei", "Periode", "Total_OPEN", "Belum_Teridentifikasi"]].reset_index(drop=True)
+        })[["Waktu", "Survei", "Periode", "Total_Data", "Belum_Teridentifikasi"]].reset_index(drop=True)
 
     def load(self):
         records = self._load_status_records()

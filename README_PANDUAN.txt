@@ -1,39 +1,27 @@
-PATCH OPTIMASI GOOGLE SHEETS - MONITOR-VHTS
+PATCH MONITORING FASIH-SM — SEMUA STATUS
 
-Isi paket:
+Isi patch:
+- app.py: menerima snapshot seluruh status, menampilkan ringkasan status, rekap status per kabupaten/kota, grafik komposisi, dan filter status untuk detail.
+- database/history_manager.py: label jumlah pada riwayat snapshot menjadi Total_Data (nama kolom worksheet lama tetap dipertahankan agar kompatibel).
+
+CARA PAKAI:
+1. Di FASIH-SM, buka Data dan ubah dropdown status dari OPEN menjadi SEMUA.
+2. Unduh SELURUH halaman JSON untuk filter SEMUA. Jangan hanya unduh halaman pertama.
+3. Di dashboard, upload seluruh JSON hasil pengambilan yang sama.
+4. Centang konfirmasi dan klik "Ganti Snapshot Semua Status dengan Data Terbaru".
+5. Periksa total dan rekap per status setelah dashboard refresh.
+
+PENTING:
+- Jangan upload satu status per satu sebagai proses pembaruan terpisah. Fungsi replace_import mengganti seluruh snapshot aktif untuk survei/periode tersebut. Jika upload OPEN lalu upload DRAFT, snapshot DRAFT akan menggantikan OPEN.
+- Upload SEMUA satu kali agar seluruh status tersimpan bersama.
+- Patch menerima URL FASIH dengan status=ALL, status=SEMUA, atau tanpa parameter status. File yang URL-nya secara eksplisit berisi status=OPEN / DRAFT / status tunggal akan ditolak untuk mencegah snapshot parsial.
+- Kolom Status pada tabel JSON wajib ada. Baris tanpa status valid tidak diikutkan.
+- MASTER_DATA dan riwayat yang sudah ada tidak perlu dihapus. Upload SEMUA pertama kali akan mengganti snapshot aktif survei/periode terpilih dengan seluruh status.
+- Pertahankan file lain seperti config.py, database/data_manager.py, utils/, requirements.txt, dan .streamlit/secrets.toml yang sudah ada. Jangan commit secrets.toml ke GitHub.
+
+FILE YANG DIGANTI:
 - app.py
-- config.py
-- database/data_manager.py
 - database/history_manager.py
-- database/__init__.py
 
-Tujuan:
-1. Mengurangi pembacaan Google Sheets berulang saat Streamlit rerun.
-2. Menyimpan objek manager/koneksi selama proses aplikasi hidup.
-3. Cache pembacaan MASTER_DATA, LOG_UPDATE, HISTORI_STATUS, SNAPSHOT_HISTORY selama 45 detik.
-4. Menghapus cache setelah data terkait berhasil ditulis.
-5. Retry terbatas untuk HTTP 429/500/502/503/504.
-6. Mengganti pola clear()+update() pada MASTER_DATA menjadi satu update kolom A
-   yang juga menulis baris kosong di belakang, agar tidak ada langkah clear terpisah.
-
-CARA MEMASANG:
-1. Backup folder project/repository monitor-vhts terlebih dahulu.
-2. Ganti file-file pada repository dengan file yang ada di paket ini:
-   - app.py di folder utama
-   - config.py di folder utama
-   - data_manager.py di folder database
-   - history_manager.py di folder database
-   - pastikan database/__init__.py ada
-3. Jangan mengubah Streamlit Secrets dan jangan mengunggah secrets.toml ke GitHub.
-4. Commit dan push perubahan ke branch main.
-5. Tunggu Streamlit Cloud selesai melakukan redeploy, lalu buka aplikasi.
-
-CATATAN:
-- Struktur worksheet dan header yang digunakan tetap sama.
-- Cache berlaku paling lama 45 detik. Setelah upload/reset berhasil, cache yang
-  bersangkutan langsung dibersihkan agar tampilan berikutnya membaca data terbaru.
-- Jika masih terjadi 429, aplikasi mencoba ulang dengan jeda bertahap. Retry bukan
-  pengganti kuota API; jika trafik tinggi, jeda cache dapat ditambah.
-- Google Sheets tetap menjadi penyimpanan utama. Jangan hapus worksheet yang ada.
-- Lakukan pengujian upload kecil/terkontrol setelah deploy. Jangan menguji dengan
-  menghapus data produksi.
+Tes sintaks Python: berhasil.
+Koneksi ke Google Sheets dan format URL filter SEMUA harus diverifikasi saat deployment.

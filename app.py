@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from urllib.parse import urlparse, parse_qs
 
 import pandas as pd
 import plotly.express as px
@@ -43,7 +44,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.markdown(
-    '<p class="sub-title">BPS PROVINSI ACEH · Monitoring status assignment OPEN</p>',
+    '<p class="sub-title">BPS PROVINSI ACEH · Monitoring seluruh status assignment</p>',
     unsafe_allow_html=True,
 )
 
@@ -61,10 +62,10 @@ with st.sidebar:
     st.markdown("**Alur pembaruan data**")
     st.markdown(
         "1. Login FASIH-SM melalui Chrome.\n"
-        "2. Pilih VHTS 2026 → 10 OKTOBER → Data → OPEN.\n"
+        "2. Pilih VHTS 2026 → 10 OKTOBER → Data → SEMUA.\n"
         "3. Unduh JSON untuk seluruh halaman melalui ekstensi.\n"
         "4. Upload semua JSON terbaru di dashboard.\n"
-        "5. Klik **Ganti Snapshot OPEN**."
+        "5. Klik **Ganti Snapshot Semua Status**."
     )
     st.info(
         "Dashboard tidak melakukan login atau scraping otomatis. "
@@ -90,11 +91,11 @@ with st.sidebar:
 # ============================================================
 # UPLOAD DAN GANTI SNAPSHOT
 # ============================================================
-st.subheader("Perbarui data OPEN")
+st.subheader("Perbarui data seluruh status")
 st.write(
-    "Upload seluruh file JSON dari semua halaman FASIH-SM untuk satu kali pengambilan. "
-    "Data aktif survei/periode terpilih akan **diganti** dengan hasil terbaru, "
-    "bukan ditambahkan ke data lama."
+    "Di FASIH-SM, pilih filter **SEMUA** (bukan hanya OPEN), lalu unduh seluruh halaman JSON. "
+    "Upload semua file hasil satu kali pengambilan. Data aktif survei/periode terpilih akan "
+    "**diganti seluruhnya** dengan snapshot terbaru yang mencakup semua status."
 )
 
 uploads = st.file_uploader(
@@ -105,12 +106,12 @@ uploads = st.file_uploader(
 )
 confirmed = st.checkbox(
     "Saya memastikan semua file berasal dari FASIH-SM, survei VHTS 2026, "
-    "periode 10 OKTOBER, status assignment OPEN, dan mencakup seluruh halaman.",
+    "periode 10 OKTOBER, filter status SEMUA, dan mencakup seluruh halaman.",
     key="confirm_snapshot",
 )
 
 if st.button(
-    "🔄 Ganti Snapshot OPEN dengan Data Terbaru",
+    "🔄 Ganti Snapshot Semua Status dengan Data Terbaru",
     type="primary",
     disabled=not uploads or not confirmed,
 ):
@@ -127,8 +128,15 @@ if st.button(
                 if "fasih-sm.bps.go.id" not in url.lower():
                     rejected.append(f"{uploaded_file.name}: URL bukan FASIH-SM")
                     continue
-                if payload.get("page_text_has_open_filter") is False:
-                    rejected.append(f"{uploaded_file.name}: indikator filter OPEN tidak ditemukan")
+                # Tolak file yang URL-nya secara eksplisit masih memakai filter status tunggal.
+                # Untuk filter SEMUA, FASIH umumnya memakai status=ALL atau tanpa parameter status.
+                status_params = parse_qs(urlparse(url).query).get("status", [])
+                selected_status = status_params[0].strip().upper() if status_params else ""
+                if selected_status not in ("", "ALL", "SEMUA", "ALL_STATUS"):
+                    rejected.append(
+                        f"{uploaded_file.name}: URL masih memakai filter status '{selected_status}'. "
+                        "Pilih SEMUA di FASIH-SM lalu unduh ulang seluruh halaman."
+                    )
                     continue
                 if payload.get("page_text_has_survey") is False:
                     rejected.append(f"{uploaded_file.name}: survei VHTS 2026 tidak terdeteksi")
@@ -190,14 +198,25 @@ if st.button(
 
             frame = frame.rename(columns=rename)
 
-            # File diambil dari filter OPEN. Jika kolom status ada, validasi tetap dilakukan.
+            # Semua baris status harus memiliki status yang terbaca.
             if "Status Assignment" not in frame.columns:
-                frame["Status Assignment"] = "OPEN"
-            frame["Status Assignment"] = frame["Status Assignment"].astype(str).str.strip().str.upper()
-            frame = frame[frame["Status Assignment"].eq("OPEN")].copy()
+                st.error(
+                    "Kolom Status tidak ditemukan pada JSON. Snapshot lama tetap dipertahankan. "
+                    "Pastikan ekstensi mengunduh tabel yang memuat kolom Status."
+                )
+                st.stop()
+
+            frame["Status Assignment"] = (
+                frame["Status Assignment"].astype(str).str.strip().str.upper()
+            )
+            frame = frame[
+                frame["Status Assignment"].notna()
+                & frame["Status Assignment"].ne("")
+                & ~frame["Status Assignment"].isin(["NAN", "NONE", "-"])
+            ].copy()
 
             if frame.empty:
-                st.error("Tidak ditemukan baris OPEN. Snapshot lama tetap dipertahankan.")
+                st.error("Tidak ditemukan baris dengan status valid. Snapshot lama tetap dipertahankan.")
             else:
                 frame["Kode Wilayah"] = frame.apply(extract_kode_wilayah, axis=1)
                 frame["Kabupaten/Kota"] = frame.apply(infer_wilayah, axis=1)
@@ -214,7 +233,7 @@ if st.button(
 
                     unknown = int((frame["Kabupaten/Kota"] == "BELUM TERIDENTIFIKASI").sum())
                     st.success(
-                        f"Snapshot berhasil diperbarui: {imported_count:,} data OPEN aktif "
+                        f"Snapshot berhasil diperbarui: {imported_count:,} data dari seluruh status "
                         f"dari {len(source_names)} file. Data lama untuk survei/periode ini "
                         f"telah digantikan."
                     )
@@ -233,7 +252,7 @@ st.divider()
 df = db.load_master()
 
 if df.empty:
-    st.info("Belum ada data aktif. Upload JSON terbaru untuk memulai monitoring.")
+    st.info("Belum ada data aktif. Upload JSON terbaru dengan filter SEMUA untuk memulai monitoring.")
     snapshots = history.load_snapshots()
     if not snapshots.empty:
         with st.expander("Riwayat snapshot sebelumnya"):
@@ -245,12 +264,17 @@ if "Nama Survei" in df.columns:
 if "Periode" in df.columns:
     df = df[df["Periode"].eq(period)]
 
-if "Status Assignment" in df.columns:
-    open_df = df[df["Status Assignment"].astype(str).str.upper().eq("OPEN")].copy()
-else:
-    open_df = df.copy()
+if "Status Assignment" not in df.columns:
+    df["Status Assignment"] = "TIDAK DIKETAHUI"
+df["Status Assignment"] = (
+    df["Status Assignment"].fillna("TIDAK DIKETAHUI").astype(str).str.strip().str.upper()
+)
+df.loc[df["Status Assignment"].isin(["", "NAN", "NONE", "-"]), "Status Assignment"] = "TIDAK DIKETAHUI"
 
-open_count = len(open_df)
+status_counts = (
+    df.groupby("Status Assignment").size().sort_values(ascending=False).rename("Jumlah")
+)
+total_count = len(df)
 latest = db.latest_sync()
 
 
@@ -263,59 +287,94 @@ def metric(label, value):
     )
 
 
-c1, c2, c3, c4 = st.columns(4)
+st.subheader("Ringkasan seluruh status assignment")
+st.caption("Jumlah data berdasarkan status terakhir yang tercatat pada snapshot FASIH-SM.")
+
+status_items = list(status_counts.items())
+for start_idx in range(0, len(status_items), 4):
+    row_items = status_items[start_idx:start_idx + 4]
+    metric_cols = st.columns(len(row_items))
+    for col, (status_name, amount) in zip(metric_cols, row_items):
+        with col:
+            metric(status_name, int(amount))
+
+c1, c2, c3 = st.columns(3)
 with c1:
-    metric("TOTAL DATA OPEN", open_count)
+    metric("TOTAL SELURUH DATA", total_count)
 with c2:
     identified = (
-        open_df.loc[open_df["Kabupaten/Kota"] != "BELUM TERIDENTIFIKASI", "Kabupaten/Kota"].nunique()
-        if "Kabupaten/Kota" in open_df.columns else 0
+        df.loc[df["Kabupaten/Kota"] != "BELUM TERIDENTIFIKASI", "Kabupaten/Kota"].nunique()
+        if "Kabupaten/Kota" in df.columns else 0
     )
     metric("KAB/KOTA TERIDENTIFIKASI", identified)
 with c3:
-    unknown_count = (
-        int((open_df["Kabupaten/Kota"] == "BELUM TERIDENTIFIKASI").sum())
-        if "Kabupaten/Kota" in open_df.columns else open_count
-    )
-    metric("BELUM TERIDENTIFIKASI", unknown_count)
-with c4:
     metric("PEMBARUAN TERAKHIR", latest or "—")
 
 
 # ============================================================
-# REKAP PER KABUPATEN/KOTA
+# REKAP PER KABUPATEN/KOTA DAN STATUS
 # ============================================================
 st.divider()
-st.subheader("Monitoring OPEN per Kabupaten/Kota")
+st.subheader("Rekap status per Kabupaten/Kota")
 
-if "Kabupaten/Kota" not in open_df.columns:
-    open_df["Kabupaten/Kota"] = "BELUM TERIDENTIFIKASI"
+if "Kabupaten/Kota" not in df.columns:
+    df["Kabupaten/Kota"] = "BELUM TERIDENTIFIKASI"
+df["Kabupaten/Kota"] = df["Kabupaten/Kota"].fillna("BELUM TERIDENTIFIKASI")
+df.loc[df["Kabupaten/Kota"].astype(str).str.strip().eq(""), "Kabupaten/Kota"] = "BELUM TERIDENTIFIKASI"
 
-counts = open_df.groupby("Kabupaten/Kota").size().rename("OPEN").reset_index()
-summary = pd.DataFrame({"Kabupaten/Kota": ACEH_REGENCIES}).merge(
-    counts, how="left", on="Kabupaten/Kota"
+status_order = [
+    "OPEN",
+    "DRAFT",
+    "SUBMITTED BY PENCACAH",
+    "APPROVED BY PENGAWAS",
+    "COMPLETED BY ADMIN KABUPATEN",
+]
+present_statuses = [x for x in status_order if x in df["Status Assignment"].unique()]
+present_statuses += sorted(
+    x for x in df["Status Assignment"].unique()
+    if x not in present_statuses
 )
-summary["OPEN"] = summary["OPEN"].fillna(0).astype(int)
-unknown = int((open_df["Kabupaten/Kota"] == "BELUM TERIDENTIFIKASI").sum())
-if unknown:
-    summary = pd.concat(
-        [summary, pd.DataFrame([{"Kabupaten/Kota": "BELUM TERIDENTIFIKASI", "OPEN": unknown}])],
-        ignore_index=True,
-    )
-summary = summary.sort_values("OPEN", ascending=False, kind="stable").reset_index(drop=True)
-summary.insert(0, "No", range(1, len(summary) + 1))
 
-left, right = st.columns([1.1, 1])
-with left:
-    st.dataframe(summary, use_container_width=True, hide_index=True, height=540)
-with right:
-    chart = summary[summary["Kabupaten/Kota"] != "BELUM TERIDENTIFIKASI"].sort_values("OPEN")
-    fig = px.bar(
-        chart, x="OPEN", y="Kabupaten/Kota", orientation="h", text="OPEN",
-        title="Jumlah OPEN per Kabupaten/Kota", color="OPEN",
-        color_continuous_scale=["#b9d8f2", "#07549a"],
+pivot = (
+    df.groupby(["Kabupaten/Kota", "Status Assignment"])
+    .size()
+    .unstack(fill_value=0)
+)
+pivot = pivot.reindex(index=ACEH_REGENCIES, fill_value=0)
+if "BELUM TERIDENTIFIKASI" in df["Kabupaten/Kota"].values:
+    pivot.loc["BELUM TERIDENTIFIKASI"] = (
+        df[df["Kabupaten/Kota"] == "BELUM TERIDENTIFIKASI"]
+        .groupby(["Kabupaten/Kota", "Status Assignment"])
+        .size()
+        .unstack(fill_value=0)
+        .iloc[0]
     )
-    fig.update_layout(showlegend=False, coloraxis_showscale=False, margin=dict(l=5, r=5, t=50, b=5))
+pivot = pivot.reindex(columns=present_statuses, fill_value=0)
+pivot["TOTAL"] = pivot.sum(axis=1)
+pivot = pivot.sort_values("TOTAL", ascending=False, kind="stable")
+pivot_display = pivot.reset_index()
+pivot_display.insert(0, "No", range(1, len(pivot_display) + 1))
+summary = pivot_display.copy()
+
+left, right = st.columns([1.15, 1])
+with left:
+    st.dataframe(pivot_display, use_container_width=True, hide_index=True, height=540)
+with right:
+    chart_data = (
+        df.groupby(["Kabupaten/Kota", "Status Assignment"])
+        .size().reset_index(name="Jumlah")
+    )
+    chart_data = chart_data[chart_data["Kabupaten/Kota"] != "BELUM TERIDENTIFIKASI"]
+    fig = px.bar(
+        chart_data,
+        x="Jumlah",
+        y="Kabupaten/Kota",
+        color="Status Assignment",
+        orientation="h",
+        title="Komposisi status per Kabupaten/Kota",
+        barmode="stack",
+    )
+    fig.update_layout(margin=dict(l=5, r=5, t=50, b=5), legend_title_text="Status")
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -323,15 +382,18 @@ with right:
 # DETAIL DATA DAN EKSPOR
 # ============================================================
 st.divider()
-st.subheader("Detail Data OPEN")
+st.subheader("Detail Data Assignment")
 col1, col2 = st.columns([2, 1])
 with col1:
     search = st.text_input("Cari nama usaha / ID SBR", placeholder="Ketik kata kunci...")
 with col2:
-    areas = ["Semua"] + sorted(open_df["Kabupaten/Kota"].fillna("BELUM TERIDENTIFIKASI").unique().tolist())
+    areas = ["Semua"] + sorted(df["Kabupaten/Kota"].fillna("BELUM TERIDENTIFIKASI").unique().tolist())
     selected = st.selectbox("Filter kabupaten/kota", areas)
 
-detail = open_df.copy()
+status_filter = st.selectbox("Filter status assignment", ["Semua"] + present_statuses)
+detail = df.copy()
+if status_filter != "Semua":
+    detail = detail[detail["Status Assignment"].eq(status_filter)]
 if search:
     detail = detail[detail.astype(str).apply(lambda col: col.str.contains(search, case=False, na=False)).any(axis=1)]
 if selected != "Semua":
@@ -354,9 +416,9 @@ if not detail.empty:
     )
 
 # Backup data aktif agar pengguna bisa menyimpan salinan di luar hosting.
-backup_json = open_df.to_json(orient="records", force_ascii=False, indent=2)
+backup_json = df.to_json(orient="records", force_ascii=False, indent=2)
 st.download_button(
-    "💾 Unduh backup data aktif (JSON)",
+    "💾 Unduh backup seluruh status (JSON)",
     data=backup_json,
     file_name=f"backup_{survey.replace(' ', '_')}_{period.replace(' ', '_')}.json",
     mime="application/json",
