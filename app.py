@@ -23,8 +23,37 @@ st.markdown(
     :root { --bps-blue:#07549a; --bps-blue-2:#1676bd; --bps-gold:#f5a623; }
     .stApp { background: #f3f7fb; color: #19344f; }
     [data-testid="stHeader"] { background: rgba(243,247,251,.88); }
-    [data-testid="stSidebar"] { background: #eaf1f8; border-right:1px solid #dce7f1; }
+    [data-testid="stSidebar"] { background: #eaf1f8 !important; border-right:1px solid #dce7f1; }
+    /* Pastikan teks sidebar terbaca pada tema browser/Streamlit apa pun. */
+    [data-testid="stSidebar"], [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] span, [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] .stMarkdown,
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"],
+    [data-testid="stSidebar"] [data-testid="stWidgetLabel"],
+    [data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
+      color:#19344f !important;
+    }
+    [data-testid="stSidebar"] [data-baseweb="select"] > div {
+      background:#fff !important; border-color:#cbd9e6 !important;
+    }
+    [data-testid="stSidebar"] [data-baseweb="select"] *,
+    [data-testid="stSidebar"] input { color:#19344f !important; }
+    [data-testid="stSidebar"] button {
+      color:#fff !important; background:#07549a !important; border-color:#07549a !important;
+    }
+    [data-testid="stSidebar"] button * { color:#fff !important; }
     .block-container { padding-top:1.35rem; padding-bottom:3rem; max-width:1580px; }
+    /* Samakan warna label dan area upload dengan tema terang. */
+    .stApp, .stApp p, .stApp label, .stApp [data-testid="stWidgetLabel"] { color:#19344f; }
+    [data-testid="stFileUploader"] section {
+      background:#fff !important; border:1px dashed #a9bfd3 !important; border-radius:14px !important;
+    }
+    [data-testid="stFileUploader"] section *,
+    [data-testid="stFileUploader"] small { color:#36536e !important; }
+    [data-testid="stFileUploader"] button {
+      color:#07549a !important; background:#eef5fb !important; border:1px solid #cbddec !important;
+    }
+    [data-testid="stFileUploader"] button * { color:#07549a !important; }
     h1,h2,h3 { color:#153b5c; letter-spacing:-.025em; }
     .hero { background:linear-gradient(115deg,#063b70 0%,#07549a 58%,#1682c5 100%);
       color:white; padding:25px 30px; border-radius:22px; margin:0 0 24px 0;
