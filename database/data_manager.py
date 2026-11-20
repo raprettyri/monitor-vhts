@@ -1,16 +1,18 @@
 import json
+import time
 from datetime import datetime
 
 import pandas as pd
 
 from config import get_worksheet
 
-
 MASTER_HEADERS = ["row_json"]
 LOG_HEADERS = [
     "id", "waktu", "survey", "period", "status", "total_open",
     "jumlah_diambil", "validasi", "error",
 ]
+
+CACHE_TTL_SECONDS = 45
 
 
 def _clean_value(value):
@@ -25,38 +27,73 @@ def _clean_value(value):
     return value
 
 
-class DataManager:
-    """Pengganti DataManager SQLite dengan Google Sheets.
+def _retry_api(call, *args, **kwargs):
+    """Retry terbatas untuk throttling sementara dari Google Sheets API."""
+    delays = (2, 4, 8, 15)
+    for attempt in range(len(delays) + 1):
+        try:
+            return call(*args, **kwargs)
+        except Exception as exc:
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            # gspread.APIError pada beberapa versi menyimpan code di exc.code.
+            if status is None:
+                status = getattr(exc, "code", None)
+            if status not in (429, 500, 502, 503, 504) or attempt == len(delays):
+                raise
+            time.sleep(delays[attempt])
 
-    Nama method dan bentuk hasilnya dipertahankan agar pemanggilan dari app.py
-    yang sudah ada tetap kompatibel.
-    """
+
+class DataManager:
+    """Google Sheets backend dengan cache pendek untuk mengurangi read requests."""
 
     def __init__(self):
         self.master_ws = get_worksheet("MASTER_DATA", MASTER_HEADERS)
         self.logs_ws = get_worksheet("LOG_UPDATE", LOG_HEADERS)
+        self._master_cache = None
+        self._master_cache_at = 0.0
+        self._logs_cache = None
+        self._logs_cache_at = 0.0
 
-    def load_master(self):
-        values = self.master_ws.get_all_values()
+    def _invalidate_master(self):
+        self._master_cache = None
+        self._master_cache_at = 0.0
+
+    def _invalidate_logs(self):
+        self._logs_cache = None
+        self._logs_cache_at = 0.0
+
+    def load_master(self, force_refresh=False):
+        now = time.monotonic()
+        if (
+            not force_refresh
+            and self._master_cache is not None
+            and now - self._master_cache_at < CACHE_TTL_SECONDS
+        ):
+            return self._master_cache.copy(deep=True)
+
+        values = _retry_api(self.master_ws.get_all_values)
         if len(values) <= 1:
-            return pd.DataFrame()
+            result = pd.DataFrame()
+        else:
+            records = []
+            for row in values[1:]:
+                if not row or not row[0].strip():
+                    continue
+                try:
+                    records.append(json.loads(row[0]))
+                except (json.JSONDecodeError, TypeError):
+                    raise RuntimeError(
+                        "Ada baris row_json yang tidak valid pada tab MASTER_DATA. "
+                        "Periksa data sebelum melakukan upload ulang."
+                    )
+            result = pd.DataFrame(records) if records else pd.DataFrame()
 
-        records = []
-        for row in values[1:]:
-            if not row or not row[0].strip():
-                continue
-            try:
-                records.append(json.loads(row[0]))
-            except (json.JSONDecodeError, TypeError):
-                # Jangan diam-diam mengabaikan data rusak.
-                raise RuntimeError(
-                    "Ada baris row_json yang tidak valid pada tab MASTER_DATA. "
-                    "Periksa data sebelum melakukan upload ulang."
-                )
-        return pd.DataFrame(records) if records else pd.DataFrame()
+        self._master_cache = result.copy(deep=True)
+        self._master_cache_at = time.monotonic()
+        return result
 
     def replace_master(self, df):
-        """Ganti seluruh isi MASTER_DATA dengan DataFrame yang diberikan."""
+        """Ganti MASTER_DATA; cache dibersihkan hanya setelah penulisan berhasil."""
         if df is None:
             df = pd.DataFrame()
 
@@ -75,13 +112,24 @@ class DataManager:
             for record in records
         ])
 
-        # Satu kali clear lalu tulis ulang agar data snapshot tidak bertumpuk.
-        self.master_ws.clear()
-        self.master_ws.update(values=rows, range_name="A1", value_input_option="RAW")
+        # Tulis seluruh kolom A dalam SATU permintaan update.
+        # Baris kosong di belakang menghapus sisa snapshot lama tanpa clear() terpisah.
+        # Dengan demikian, kegagalan update tidak didahului pengosongan sheet.
+        target_rows = max(int(self.master_ws.row_count), len(rows))
+        if target_rows > int(self.master_ws.row_count):
+            _retry_api(self.master_ws.resize, rows=target_rows)
+
+        padded_rows = rows + [[""]] * (target_rows - len(rows))
+        _retry_api(
+            self.master_ws.update,
+            values=padded_rows,
+            range_name=f"A1:A{target_rows}",
+            value_input_option="RAW",
+        )
+        self._invalidate_master()
 
     @staticmethod
     def _identity(row):
-        # ID Assignment paling spesifik; fallback mengikuti implementasi lama.
         for col in ("ID Assignment", "Kode Identitas", "ID SBR"):
             val = str(row.get(col, "")).strip()
             if val and val.lower() not in ("nan", "none", "-"):
@@ -94,12 +142,10 @@ class DataManager:
         )
 
     def replace_import(self, df, survey, period, source_files):
-        """Ganti snapshot hanya untuk kombinasi survei dan periode terpilih."""
         incoming = df.copy()
         incoming["Nama Survei"] = survey
         incoming["Periode"] = period
-        imported_at = datetime.now().isoformat(timespec="seconds")
-        incoming["Waktu Scraping"] = imported_at
+        incoming["Waktu Scraping"] = datetime.now().isoformat(timespec="seconds")
 
         incoming["_dedup_key"] = incoming.apply(self._identity, axis=1)
         incoming = incoming.drop_duplicates(subset=["_dedup_key"], keep="last")
@@ -114,8 +160,6 @@ class DataManager:
         else:
             combined = incoming
 
-        # Simpan snapshot baru dahulu. Jika penulisan gagal, exception diteruskan
-        # sehingga app.py dapat menampilkan pesan gagal, bukan sukses palsu.
         self.replace_master(combined)
         source_names = ", ".join(source_files or [])
         self.add_log(
@@ -130,7 +174,6 @@ class DataManager:
         return len(incoming), len(combined)
 
     def reset_period(self, survey, period):
-        """Hapus data aktif hanya untuk survei dan periode terpilih."""
         existing = self.load_master()
         if existing.empty:
             removed = 0
@@ -155,7 +198,8 @@ class DataManager:
     def add_log(self, survey, period, status, total, taken, validation, error):
         current = self.load_logs()
         next_id = int(current["id"].max()) + 1 if not current.empty else 1
-        self.logs_ws.append_row(
+        _retry_api(
+            self.logs_ws.append_row,
             [
                 next_id,
                 datetime.now().isoformat(timespec="seconds"),
@@ -169,15 +213,29 @@ class DataManager:
             ],
             value_input_option="RAW",
         )
+        self._invalidate_logs()
 
-    def load_logs(self):
-        values = self.logs_ws.get_all_values()
+    def load_logs(self, force_refresh=False):
+        now = time.monotonic()
+        if (
+            not force_refresh
+            and self._logs_cache is not None
+            and now - self._logs_cache_at < CACHE_TTL_SECONDS
+        ):
+            return self._logs_cache.copy(deep=True)
+
+        values = _retry_api(self.logs_ws.get_all_values)
         if len(values) <= 1:
-            return pd.DataFrame(columns=LOG_HEADERS)
-        df = pd.DataFrame(values[1:], columns=LOG_HEADERS)
-        for col in ("id", "total_open", "jumlah_diambil"):
-            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
-        return df.sort_values("id", ascending=False).reset_index(drop=True)
+            result = pd.DataFrame(columns=LOG_HEADERS)
+        else:
+            result = pd.DataFrame(values[1:], columns=LOG_HEADERS)
+            for col in ("id", "total_open", "jumlah_diambil"):
+                result[col] = pd.to_numeric(result[col], errors="coerce").fillna(0).astype(int)
+            result = result.sort_values("id", ascending=False).reset_index(drop=True)
+
+        self._logs_cache = result.copy(deep=True)
+        self._logs_cache_at = time.monotonic()
+        return result
 
     def latest_sync(self):
         logs = self.load_logs()

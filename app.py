@@ -30,8 +30,13 @@ st.markdown(
 )
 
 
-db = DataManager()
-history = HistoryManager()
+@st.cache_resource(show_spinner=False)
+def get_managers():
+    """Pertahankan koneksi dan cache manager antar-rerun Streamlit."""
+    return DataManager(), HistoryManager()
+
+
+db, history = get_managers()
 
 st.markdown(
     '<p class="main-title">MONITORING PROGRES PENDATAAN FASIH-SM</p>',

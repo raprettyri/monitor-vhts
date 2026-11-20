@@ -1,29 +1,39 @@
-MIGRASI DATABASE MONITORING OPEN VHTS 2026 KE GOOGLE SHEETS
+PATCH OPTIMASI GOOGLE SHEETS - MONITOR-VHTS
 
-File pengganti:
-1. config.py
-2. data_manager.py
-3. history_manager.py
+Isi paket:
+- app.py
+- config.py
+- database/data_manager.py
+- database/history_manager.py
+- database/__init__.py
 
-PENTING:
-- Simpan salinan/backup tiga file lama sebelum mengganti.
-- config.py mempertahankan DB_PATH, DATA_DIR, LOG_DIR, PROFILE_DIR,
-  STATUS_PATH, FASIH_URL, DEFAULT_SURVEY, dan DEFAULT_PERIOD untuk kompatibilitas.
-- DataManager dan HistoryManager versi ini tidak lagi memakai SQLite.
-- Tab Google Sheets akan dibuat otomatis bila belum ada, dengan nama:
-  MASTER_DATA, LOG_UPDATE, HISTORI_STATUS, SNAPSHOT_HISTORY.
-- Jangan ubah nama/header tab setelah aplikasi mulai digunakan.
+Tujuan:
+1. Mengurangi pembacaan Google Sheets berulang saat Streamlit rerun.
+2. Menyimpan objek manager/koneksi selama proses aplikasi hidup.
+3. Cache pembacaan MASTER_DATA, LOG_UPDATE, HISTORI_STATUS, SNAPSHOT_HISTORY selama 45 detik.
+4. Menghapus cache setelah data terkait berhasil ditulis.
+5. Retry terbatas untuk HTTP 429/500/502/503/504.
+6. Mengganti pola clear()+update() pada MASTER_DATA menjadi satu update kolom A
+   yang juga menulis baris kosong di belakang, agar tidak ada langkah clear terpisah.
 
-DEPENDENSI requirements.txt:
-Tambahkan:
-gspread>=6.1
-google-auth>=2.0
+CARA MEMASANG:
+1. Backup folder project/repository monitor-vhts terlebih dahulu.
+2. Ganti file-file pada repository dengan file yang ada di paket ini:
+   - app.py di folder utama
+   - config.py di folder utama
+   - data_manager.py di folder database
+   - history_manager.py di folder database
+   - pastikan database/__init__.py ada
+3. Jangan mengubah Streamlit Secrets dan jangan mengunggah secrets.toml ke GitHub.
+4. Commit dan push perubahan ke branch main.
+5. Tunggu Streamlit Cloud selesai melakukan redeploy, lalu buka aplikasi.
 
-SECRETS:
-Tambahkan SPREADSHEET_ID dan [gcp_service_account] pada
-.streamlit/secrets.toml (lokal) serta Streamlit Cloud > App settings > Secrets.
-
-Catatan kompatibilitas:
-Versi ini mempertahankan nama method yang ada pada file SQLite yang diberikan.
-Sebelum deploy, jalankan tes lokal dan periksa apakah app.py memanggil method
-lain di luar method yang dipertahankan tersebut.
+CATATAN:
+- Struktur worksheet dan header yang digunakan tetap sama.
+- Cache berlaku paling lama 45 detik. Setelah upload/reset berhasil, cache yang
+  bersangkutan langsung dibersihkan agar tampilan berikutnya membaca data terbaru.
+- Jika masih terjadi 429, aplikasi mencoba ulang dengan jeda bertahap. Retry bukan
+  pengganti kuota API; jika trafik tinggi, jeda cache dapat ditambah.
+- Google Sheets tetap menjadi penyimpanan utama. Jangan hapus worksheet yang ada.
+- Lakukan pengujian upload kecil/terkontrol setelah deploy. Jangan menguji dengan
+  menghapus data produksi.

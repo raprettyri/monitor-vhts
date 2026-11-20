@@ -1,0 +1,13 @@
+SPREADSHEET_ID = "1tugaT-mo53MPR66zFQMwpcRy2ooFW0TlfZdr5os1Jbs"
+
+[gcp_service_account]
+type = "service_account"
+project_id = "sibrio"
+private_key_id = "f680f4929215957012289029e6d9739d74912b73"
+private_key = """-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDBlJNbS3fB+Zmt\nj4jgjkGM6AvzqZAEQFBoSAxcABSCsnCKA5IOLqbNWEMGJK9tPsLYyOiS5H4aVJLf\nBaSGirTMd2MOAZKQVxTb9MKFILVoMDxJlgeKMM1qcdeStzGwSpu0yJEZgLo7JoP5\ny8c6uadjq+Irj1laD4u19nlbhxVtPh/CRuTuW43iWMEjDkzDX/764VepN+UNs3s4\nd2Mrli+skDSiMjAMCHqvM+JzW6X8n2Spm8+PYgasvvnfWkDDJDQQ2/hvBn7kuuwf\nhWMcN5yQKqoWOQYiJCi8Of5bne2gJjw/g0w9RFjnsLnEkkFhEdWwdaShrF0/cone\ns35cupTDAgMBAAECggEAH7Iew+lXcoCr6P8s1O0go9xaw0rANJyojb/o8NISiakt\n7sB8PwDkeZA6E9zDMd//h1Szaq8poVC3u6Hw48FSWSgzJS1HZ4WFT36EBcg/67n6\nJRJWVF9+mC82XOTMqKY5WHXT9u5c5SfT9Cf+4bQESbhFurF+BSuxHy98L2sELHP2\nHHwNWJ/BDkvl32ukYM0gK6wdeqeRXpPziSQTex//feA164GT148n7cjip128Yc8V\nRpSFwSRYHz/oRN4lqJ1ra2NCLwpDFARCfFsMV5ks1k3tBc4Mu5Mq+3pZ6s+dFzN5\n3AnBiPf4iUG2EMpD2yulENElYWoCWFXnQBQIjvr+AQKBgQD8OXWCCOzFMIA5wz/E\noziPiDee6hpce+liOW/70I/Xu3AXZjDdHAYOz79jhVWiLshpzKSXcUfphP8fJyBO\nFKmZlu2NzhgDoii13UFCY8OaFWCY+izWy17OcevTFCXdN8e6XwcyZvrjHITkEgJr\nKYo/gV59vamRfjWj4DrUh0PLhwKBgQDEemN5Tje2zQUW4a3eWYB6Tr5ewYopP/oD\n8b3xC2s+SnPfX1NHpmUrT0bOs3xBZb2+zLM8Lmbe+mOOQ4ZLE6+QmKB6enaziihS\nvsMoKhIvqTp27+MG5w8/ecO784Ubske06Qz0PL12yEE6BwoAE0d0K0CcRNo+uIQp\nKNOPCtGT5QKBgQDScbqqsXmkGZCTIWaeUbVKhNQropY2HikfDF90EpNB46Fl1Jzm\nj5A6YXoFtmU5uaD8LYQS27CtlYsr2gBpRXIwtS4lyBRfS7h97Uqa8xRsBnQfj3VE\nDlFfHMwvxLrG9diOluUxV5zzS4NRq/kaooE39V/6t/m4bD6jKd7MHsQhFwKBgEzv\nF5BiXlKICRwilnBgX3yE5Oo5op3wXTe6KwP90qp7gM/Qhc2ijC7fRfyeL2N0MU5K\n3UwNZ16ccOs96ZHwTWizOvN6jIxU5uEvrT9G6gQbobb8y8riIwhZ55jrDA4CSy29\nq8LfHdkrJM9R/kp1Qh9s6EnIdCTnH2j2gZCbTeE5AoGBAMEFl7u7mTcY6dipsjj/\nF4o758IN8cBIhQVRGp0TqNxG8w28lHhNlwHs7N+dWNn4OGdRogEoahkmqLU9vorJ\nUBrr2pdUZp3+e1I7yF+nGK7e2fS3S9v9lFFTaq8CDEFt5vwFu7pDWB+BKgq1y/70\noI4OnDcMLWcYfNJeS4TIlpmX\n-----END PRIVATE KEY-----\n"""
+client_email = "monev-vhts@sibrio.iam.gserviceaccount.com"
+client_id = "111933360342984243712"
+token_uri = "https://oauth2.googleapis.com/token"
+auth_uri = "https://accounts.google.com/o/oauth2/auth"
+auth_provider_x509_cert_url = "https://www.googleapis.com/oauth2/v1/certs"
+client_x509_cert_url = "https://www.googleapis.com/robot/v1/metadata/x509/monev-vhts%40sibrio.iam.gserviceaccount.com"

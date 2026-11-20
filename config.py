@@ -35,8 +35,8 @@ def _read_secret(name, default=None):
     return os.environ.get(name, default)
 
 
-def get_spreadsheet():
-    """Buka spreadsheet menggunakan Service Account dari Streamlit Secrets."""
+def _build_spreadsheet():
+    """Buat koneksi spreadsheet dari secrets."""
     import gspread
 
     spreadsheet_id = _read_secret("SPREADSHEET_ID")
@@ -64,6 +64,13 @@ def get_spreadsheet():
 
     client = gspread.service_account_from_dict(credentials_info)
     return client.open_by_key(str(spreadsheet_id))
+
+
+try:
+    import streamlit as st
+    get_spreadsheet = st.cache_resource(show_spinner=False)(_build_spreadsheet)
+except Exception:
+    get_spreadsheet = _build_spreadsheet
 
 
 def get_worksheet(title, headers):
